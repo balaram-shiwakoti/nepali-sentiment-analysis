@@ -5,8 +5,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import make_pipeline
 
-# १. नमुना नेपाली डाटासेट (Sample Nepali Dataset)
-# वास्तविक प्रोजेक्टमा हामी Kaggle को ठूलो dataset प्रयोग गर्न सक्छौँ।
+# १. नेपाली Stopwords को सूची
+NEPALI_STOPWORDS = [
+    "र", "अनि", "पनि", "त", "तर", "म", "हामी", "तपाईं", "तिमी", "उनी", "यो", "त्यो", "यी", "ती",
+    "को", "का", "की", "मा", "लाई", "ले", "बाट", "देखि", "द्वारा", "भने", "भनेर", "भए", "भयो", 
+    "छ", "छन्", "हो", "हुन्", "थियो", "थी", "थिए", "गरे", "गर्ने", "जब", "तब", "जुन", "जस्तै"
+]
+
+# २. नमुना नेपाली डाटासेट
 data = {
     "text": [
         "मलाई यो सामान एकदमै मनपर्यो, धेरै राम्रो छ!",
@@ -15,31 +21,45 @@ data = {
         "डेलिभरी एकदम छिटो भयो, म धेरै खुसी छु।",
         "कति नराम्रो सेवा! फोन पनि उठाउँदैनन्।",
         "कपडाको रङ राम्रो छ तर साइज अलि सानो भयो।",
-        "मलाई यो कत्ति पनि मन परेन, फिर्ता गर्न चाहन्छु।",
+        "मलाई यो कत्ति पनि मन परेन, फिर्ता करना चाहन्छु।",
         "धेरै राम्रो सेवा र गुणस्तरीय सामान!",
         "नयाँ अपडेट आएपछि एप चल्नै छाड्यो, बेकार छ।",
         "नेपालमा बनेको यो सामान निकै राम्रो लाग्यो।"
     ],
-    # १: सकारात्मक (Positive), -१: नकारात्मक (Negative), ०: तटस्थ (Neutral)
     "sentiment": [1, -1, 0, 1, -1, 0, -1, 1, -1, 1]
 }
 
 df = pd.DataFrame(data)
 
-# २. TF-IDF र Naive Bayes को Pipeline बनाउने
-# यसले नेपाली शब्दहरूलाई गणितीय नम्बरमा बदल्छ र वर्गीकरण गर्छ।
+# ३. नेपाली युनिकोड र मात्रा सुरक्षित राख्ने Token Pattern र Vectorizer को सिर्जना
+# token_pattern=r"(?u)\b\w+\b" ले साना मात्राहरूलाई बिगार्न दिँदैन
+vectorizer = TfidfVectorizer(
+    ngram_range=(1, 2), 
+    token_pattern=r"(?u)\b\w+\b"
+)
+
+# ४. Stopwords लाई Vectorizer को नियम अनुसार पहिले नै सफा (Analyze) गर्ने
+# यसले गर्दा 'UserWarning' पूर्ण रूपमा हराउँछ
+analyze = vectorizer.build_analyzer()
+cleaned_stopwords = list(set([token for word in NEPALI_STOPWORDS for token in analyze(word)]))
+
+# ५. नयाँ Cleaned Stopwords सहित Pipeline बनाउने
 model_pipeline = make_pipeline(
-    TfidfVectorizer(ngram_range=(1, 2)), # एक वा दुई शब्दको समूहलाई चिन्ने
+    TfidfVectorizer(
+        ngram_range=(1, 2), 
+        token_pattern=r"(?u)\b\w+\b",
+        stop_words=cleaned_stopwords
+    ),
     MultinomialNB()
 )
 
-# ३. मोडल ट्रेनिङ
-print("मोडल ट्रेनिङ सुरु हुँदैछ...")
+# ६. मोडल ट्रेनिङ
+print("🧹 सफा गरिएको नेपाली Stopwords प्रयोग गरी मोडल ट्रेनिङ सुरु हुँदैछ...")
 model_pipeline.fit(df["text"], df["sentiment"])
-print("ट्रेनिङ सम्पन्न भयो!")
+print("🎉 सफलतापूर्वक ट्रेनिङ सम्पन्न भयो (कुनै वार्निङ बिना)!")
 
-# ४. मोडललाई पिकल (Pickle) फाइलमा सेभ गर्ने
+# ७. मोडललाई सेभ गर्ने
 with open("nepali_sentiment_model.pkl", "wb") as f:
     pickle.dump(model_pipeline, f)
 
-print("मोडल 'nepali_sentiment_model.pkl' नाममा सुरक्षित गरियो।")
+print("💾 'nepali_sentiment_model.pkl' फाइल सफलतापूर्वक अपडेट गरियो।")
