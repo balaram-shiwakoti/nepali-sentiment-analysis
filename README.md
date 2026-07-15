@@ -6,8 +6,7 @@
 १. आवश्यक लाइब्रेरीहरू इन्स्टल गर्नुहोस्:
 
 ```bash
-pip install streamlit scikit-learn pandas
-
+pip install -r requirements.txt
 ```
 
 २. पहिले मोडललाई तालिम दिनुहोस्:
